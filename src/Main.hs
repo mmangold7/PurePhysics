@@ -18,6 +18,7 @@ data State = State
   , dragging     :: Bool
   , dragStart    :: (Float, Float)
   , dragCurrent  :: (Float, Float)
+  , dragMass     :: Float
   } deriving (Eq)
 
 -- Simulation constants
@@ -38,6 +39,7 @@ initialState = State
   , dragging = False
   , dragStart = (0, 0)
   , dragCurrent = (0, 0)
+  , dragMass = 1e6
   }
 
 -- Main function
@@ -56,13 +58,16 @@ drawState :: State -> Picture
 drawState State{..} = Pictures (map drawParticle particles ++ dragPicture)
   where
     dragPicture = if dragging
-                  then [drawArrow dragStart dragCurrent]
+                  then [drawArrow dragStart dragCurrent, drawDragMass dragStart dragMass]
                   else []
 
 drawParticle :: Particle -> Picture
-drawParticle Particle{..} = Translate x y (Color white (circleSolid 5))
+drawParticle Particle{..} = Translate x y (Color white (circleSolid (radius mass)))
   where
     (x, y) = position
+
+radius :: Float -> Float
+radius mass = 5 + logBase 2 (mass / 1e6)
 
 drawArrow :: (Float, Float) -> (Float, Float) -> Picture
 drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
@@ -72,18 +77,25 @@ drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
   where
     angle x1 y1 x2 y2 = 180 * atan2 (y1 - y2) (x2 - x1) / pi
 
+drawDragMass :: (Float, Float) -> Float -> Picture
+drawDragMass (x, y) mass = Translate x y (Color yellow (circleSolid (radius mass)))
+
 -- Function to handle input events
 handleInput :: Event -> State -> State
 handleInput (EventKey (MouseButton LeftButton) Down _ (x, y)) state = state
   { dragging = True
   , dragStart = (x, y)
   , dragCurrent = (x, y)
+  , dragMass = 1e6
   }
 handleInput (EventMotion (x, y)) state
-  | dragging state = state { dragCurrent = (x, y) }
+  | dragging state =
+      if distance (x, y) (dragStart state) <= 5
+      then state { dragCurrent = (x, y), dragMass = dragMass state + 1e5 }
+      else state { dragCurrent = (x, y) }
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = state
   { dragging = False
-  , particles = Particle (dragStart state) velocity 1e6 : particles state
+  , particles = Particle (dragStart state) velocity (dragMass state) : particles state
   }
   where
     (x0, y0) = dragStart state
@@ -120,3 +132,6 @@ gravitationalForce Particle{..} Particle{position = (x', y'), mass = m'} =
     force = gravityConstant * mass * m' / (distance * distance)
     fx = force * dx / distance
     fy = force * dy / distance
+
+distance :: (Float, Float) -> (Float, Float) -> Float
+distance (x1, y1) (x2, y2) = sqrt ((x2 - x1) ** 2 + (y2 - y1) ** 2)
