@@ -67,10 +67,10 @@ drawParticle Particle{..} = Translate x y (Color white (circleSolid 5))
 drawArrow :: (Float, Float) -> (Float, Float) -> Picture
 drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
   [ Line [(x1, y1), (x2, y2)]
-  , Translate x2 y2 $ Rotate (angle x1 y1 x2 y2) $ Polygon [(0, 0), (-5, -10), (5, -10)]
+  , Translate x2 y2 $ Rotate (angle x1 y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
   ]
   where
-    angle x1 y1 x2 y2 = 180 * atan2 (y2 - y1) (x2 - x1) / pi
+    angle x1 y1 x2 y2 = 180 * atan2 (y1 - y2) (x2 - x1) / pi
 
 -- Function to handle input events
 handleInput :: Event -> State -> State
@@ -83,7 +83,7 @@ handleInput (EventMotion (x, y)) state
   | dragging state = state { dragCurrent = (x, y) }
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = state
   { dragging = False
-  , particles = Particle (x, y) velocity 1e6 : particles state
+  , particles = Particle (dragStart state) velocity 1e6 : particles state
   }
   where
     (x0, y0) = dragStart state
