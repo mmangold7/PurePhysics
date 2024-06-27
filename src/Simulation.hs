@@ -6,13 +6,18 @@ import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game
 import Particle
 
--- Simulation state including the particles and dragging state
+-- Simulation state including the particles, dragging state, and view state
 data State = State
   { particles    :: [Particle]
   , dragging     :: Bool
   , dragStart    :: (Float, Float)
   , dragCurrent  :: (Float, Float)
   , dragMass     :: Float
+  , viewScale    :: Float
+  , viewTranslate :: (Float, Float)
+  , panning      :: Bool
+  , panStart     :: (Float, Float)
+  , viewStart    :: (Float, Float)
   } deriving (Eq, Show)
 
 -- Number of particles and time step
@@ -30,11 +35,18 @@ initialState = State
   , dragStart = (0, 0)
   , dragCurrent = (0, 0)
   , dragMass = 1e6
+  , viewScale = 1
+  , viewTranslate = (0, 0)
+  , panning = False
+  , panStart = (0, 0)
+  , viewStart = (0, 0)
   }
 
 -- Function to draw the state
 drawState :: State -> Picture
-drawState state@State{..} = Pictures (drawParticles particles ++ dragPicture ++ drawDebugInfo state)
+drawState state@State{..} = 
+  let view = Scale viewScale viewScale (Translate (fst viewTranslate) (snd viewTranslate) (Pictures (drawParticles particles ++ dragPicture ++ drawDebugInfo state)))
+  in view
   where
     dragPicture = if dragging
                   then [drawArrow dragStart dragCurrent, drawDragMass dragStart dragMass]
@@ -74,6 +86,7 @@ handleInput (EventKey (MouseButton LeftButton) Down _ (x, y)) state = state
   }
 handleInput (EventMotion (x, y)) state
   | dragging state = state { dragCurrent = (x, y) }
+  | panning state = state { viewTranslate = (viewStart state `plus` ((x, y) `minus` panStart state)) }
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = state
   { dragging = False
   , particles = Particle (dragStart state) velocity (dragMass state) : particles state
@@ -81,6 +94,20 @@ handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = state
   where
     (x0, y0) = dragStart state
     velocity = ((x - x0) * 0.1, (y - y0) * 0.1) -- Scale factor to adjust velocity
+handleInput (EventKey (MouseButton RightButton) Down _ (x, y)) state = state
+  { panning = True
+  , panStart = (x, y)
+  , viewStart = viewTranslate state
+  }
+handleInput (EventKey (MouseButton RightButton) Up _ _) state = state
+  { panning = False
+  }
+handleInput (EventKey (MouseButton WheelUp) Down _ _) state = state
+  { viewScale = viewScale state * 1.1
+  }
+handleInput (EventKey (MouseButton WheelDown) Down _ _) state = state
+  { viewScale = viewScale state / 1.1
+  }
 handleInput _ state = state
 
 -- Function to update the state
@@ -130,3 +157,9 @@ gravitationalForce Particle{..} Particle{position = (x', y'), mass = m'} =
 
 distance :: (Float, Float) -> (Float, Float) -> Float
 distance (x1, y1) (x2, y2) = sqrt ((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+plus :: (Float, Float) -> (Float, Float) -> (Float, Float)
+plus (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
+
+minus :: (Float, Float) -> (Float, Float) -> (Float, Float)
+minus (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
