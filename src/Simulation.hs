@@ -88,7 +88,7 @@ updateState :: Float -> State -> State
 updateState _ state =
   if dragging state
   then let newMass = if withinRadius (dragStart state) (dragCurrent state) (5 + radius (dragMass state))
-                     then dragMass state + 1e6
+                     then dragMass state + 1e7  -- Further increase mass increment rate
                      else dragMass state
        in state { dragMass = newMass, particles = map (updateParticle (particles state)) (particles state) }
   else state { particles = map (updateParticle (particles state)) (particles state) }

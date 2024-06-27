@@ -32,3 +32,5 @@ executable my-gravity-simulation
                        -Wmissing-home-modules
                        -Wpartial-fields
                        -Wredundant-constraints
+  other-modules:       Particle
+                     , Simulation
