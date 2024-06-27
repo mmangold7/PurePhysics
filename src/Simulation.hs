@@ -49,7 +49,7 @@ drawState state@State{..} = Pictures [view, hud]
     view = Scale viewScale viewScale (Translate (fst viewTranslate) (snd viewTranslate) (Pictures (drawParticles particles ++ dragPicture)))
     hud = Translate (-390) 290 $ Scale 0.1 0.1 $ Color white $ Text (unlines (map showParticleInfo (zip particles [0..])))
     dragPicture = if dragging
-                  then [drawArrow (worldToScreen state dragStart) (worldToScreen state dragCurrent), drawDragMass (worldToScreen state dragStart) dragMass]
+                  then [drawArrow dragStart dragCurrent, drawDragMass dragStart dragMass]
                   else []
 
 drawParticles :: [Particle] -> [Picture]
@@ -82,7 +82,7 @@ handleInput (EventKey (MouseButton LeftButton) Down _ (x, y)) state = state
   }
 handleInput (EventMotion (x, y)) state
   | dragging state = state { dragCurrent = screenToWorld state (x, y) }
-  | panning state = state { viewTranslate = (viewStart state `plus` ((x, y) `minus` panStart state)) }
+  | panning state = state { viewTranslate = viewStart state `plus` ((x - fst (panStart state)) / viewScale state, (y - snd (panStart state)) / viewScale state) }
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = 
   let (x0, y0) = dragStart state
       (xf, yf) = screenToWorld state (x, y)
@@ -156,16 +156,10 @@ distance :: (Float, Float) -> (Float, Float) -> Float
 distance (x1, y1) (x2, y2) = sqrt ((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 screenToWorld :: State -> (Float, Float) -> (Float, Float)
-screenToWorld State{..} (sx, sy) = ((sx - tx) / s, (sy - ty) / s)
-  where
-    (tx, ty) = viewTranslate
-    s = viewScale
+screenToWorld State{..} (sx, sy) = ((sx - fst viewTranslate) / viewScale, (sy - snd viewTranslate) / viewScale)
 
 worldToScreen :: State -> (Float, Float) -> (Float, Float)
-worldToScreen State{..} (wx, wy) = (wx * s + tx, wy * s + ty)
-  where
-    (tx, ty) = viewTranslate
-    s = viewScale
+worldToScreen State{..} (wx, wy) = (wx * viewScale + fst viewTranslate, wy * viewScale + snd viewTranslate)
 
 plus :: (Float, Float) -> (Float, Float) -> (Float, Float)
 plus (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
