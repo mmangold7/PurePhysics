@@ -86,11 +86,12 @@ handleInput _ state = state
 -- Function to update the state
 updateState :: Float -> State -> State
 updateState _ state =
-  state { particles = map (updateParticle (particles state)) (particles state)
-        , dragMass = if dragging state && withinRadius (dragStart state) (dragCurrent state) (5 + radius (dragMass state))
-                     then dragMass state + 1e5
+  if dragging state
+  then let newMass = if withinRadius (dragStart state) (dragCurrent state) (5 + radius (dragMass state))
+                     then dragMass state + 1e6
                      else dragMass state
-        }
+       in state { dragMass = newMass, particles = map (updateParticle (particles state)) (particles state) }
+  else state { particles = map (updateParticle (particles state)) (particles state) }
 
 withinRadius :: (Float, Float) -> (Float, Float) -> Float -> Bool
 withinRadius (x1, y1) (x2, y2) r = distance (x1, y1) (x2, y2) <= r
