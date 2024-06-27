@@ -44,12 +44,12 @@ initialState = State
 
 -- Function to draw the state
 drawState :: State -> Picture
-drawState state@State{..} = 
-  let view = Scale viewScale viewScale (Translate (fst viewTranslate) (snd viewTranslate) (Pictures (drawParticles particles ++ dragPicture ++ drawDebugInfo state)))
-  in view
+drawState state@State{..} = Pictures [view, hud]
   where
+    view = Scale viewScale viewScale (Translate (fst viewTranslate) (snd viewTranslate) (Pictures (drawParticles particles ++ dragPicture)))
+    hud = Translate (-390) 290 $ Scale 0.1 0.1 $ Color white $ Text (unlines (map showParticleInfo (zip particles [0..])))
     dragPicture = if dragging
-                  then [drawArrow dragStart dragCurrent, drawDragMass dragStart dragMass]
+                  then [drawArrow (worldToScreen state dragStart) (worldToScreen state dragCurrent), drawDragMass (worldToScreen state dragStart) dragMass]
                   else []
 
 drawParticles :: [Particle] -> [Picture]
@@ -66,13 +66,9 @@ drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
 drawDragMass :: (Float, Float) -> Float -> Picture
 drawDragMass (x, y) mass = Translate x y (Color (particleColor mass) (circleSolid (radius mass)))
 
-drawDebugInfo :: State -> [Picture]
-drawDebugInfo State{..} = zipWith drawParticleInfo particles [0..]
-
-drawParticleInfo :: Particle -> Int -> Picture
-drawParticleInfo Particle{..} index = Translate (-390) (290 - 20 * fromIntegral index) $ Scale 0.1 0.1 $ Color white $ Text info
+showParticleInfo :: (Particle, Int) -> String
+showParticleInfo (Particle{..}, index) = "Particle " ++ show index ++ ": Pos=(" ++ show (round x) ++ "," ++ show (round y) ++ "), Vel=(" ++ show (round vx) ++ "," ++ show (round vy) ++ "), Mass=" ++ show (round mass)
   where
-    info = "Particle " ++ show index ++ ": Pos=(" ++ show (round x) ++ "," ++ show (round y) ++ "), Vel=(" ++ show (round vx) ++ "," ++ show (round vy) ++ "), Mass=" ++ show (round mass)
     (x, y) = position
     (vx, vy) = velocity
 
@@ -80,20 +76,21 @@ drawParticleInfo Particle{..} index = Translate (-390) (290 - 20 * fromIntegral 
 handleInput :: Event -> State -> State
 handleInput (EventKey (MouseButton LeftButton) Down _ (x, y)) state = state
   { dragging = True
-  , dragStart = (x, y)
-  , dragCurrent = (x, y)
+  , dragStart = screenToWorld state (x, y)
+  , dragCurrent = screenToWorld state (x, y)
   , dragMass = 1e6
   }
 handleInput (EventMotion (x, y)) state
-  | dragging state = state { dragCurrent = (x, y) }
+  | dragging state = state { dragCurrent = screenToWorld state (x, y) }
   | panning state = state { viewTranslate = (viewStart state `plus` ((x, y) `minus` panStart state)) }
-handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = state
-  { dragging = False
-  , particles = Particle (dragStart state) velocity (dragMass state) : particles state
-  }
-  where
-    (x0, y0) = dragStart state
-    velocity = ((x - x0) * 0.1, (y - y0) * 0.1) -- Scale factor to adjust velocity
+handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = 
+  let (x0, y0) = dragStart state
+      (xf, yf) = screenToWorld state (x, y)
+      velocity = ((xf - x0) * 0.1, (yf - y0) * 0.1) -- Scale factor to adjust velocity
+  in state
+     { dragging = False
+     , particles = Particle (dragStart state) velocity (dragMass state) : particles state
+     }
 handleInput (EventKey (MouseButton RightButton) Down _ (x, y)) state = state
   { panning = True
   , panStart = (x, y)
@@ -157,6 +154,18 @@ gravitationalForce Particle{..} Particle{position = (x', y'), mass = m'} =
 
 distance :: (Float, Float) -> (Float, Float) -> Float
 distance (x1, y1) (x2, y2) = sqrt ((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+screenToWorld :: State -> (Float, Float) -> (Float, Float)
+screenToWorld State{..} (sx, sy) = ((sx - tx) / s, (sy - ty) / s)
+  where
+    (tx, ty) = viewTranslate
+    s = viewScale
+
+worldToScreen :: State -> (Float, Float) -> (Float, Float)
+worldToScreen State{..} (wx, wy) = (wx * s + tx, wy * s + ty)
+  where
+    (tx, ty) = viewTranslate
+    s = viewScale
 
 plus :: (Float, Float) -> (Float, Float) -> (Float, Float)
 plus (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
