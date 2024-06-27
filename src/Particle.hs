@@ -13,7 +13,7 @@ data Particle = Particle
 
 -- Simulation constants
 gravityConstant :: Float
-gravityConstant = 6.67430e-7  -- Increase the gravitational constant for stronger attraction
+gravityConstant = 6.67430e-9  -- Increase the gravitational constant for stronger attraction
 
 -- Function to draw a particle
 drawParticle :: Particle -> Picture

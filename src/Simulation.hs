@@ -52,7 +52,7 @@ drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
     angle x1 y1 x2 y2 = 180 * atan2 (y1 - y2) (x2 - x1) / pi
 
 drawDragMass :: (Float, Float) -> Float -> Picture
-drawDragMass (x, y) mass = Translate x y (Color yellow (circleSolid (radius mass)))
+drawDragMass (x, y) mass = Translate x y (Color (particleColor mass) (circleSolid (radius mass)))
 
 drawDebugInfo :: State -> [Picture]
 drawDebugInfo State{..} = zipWith drawParticleInfo particles [0..]
@@ -88,7 +88,7 @@ updateState :: Float -> State -> State
 updateState _ state =
   if dragging state
   then let newMass = if withinRadius (dragStart state) (dragCurrent state) (5 + radius (dragMass state))
-                     then dragMass state + 1e7  -- Further increase mass increment rate
+                     then dragMass state * 1.05  -- Increase mass exponentially at a faster rate
                      else dragMass state
        in state { dragMass = newMass, particles = map (updateParticle (particles state)) (particles state) }
   else state { particles = map (updateParticle (particles state)) (particles state) }
