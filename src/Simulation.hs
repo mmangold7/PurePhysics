@@ -5,6 +5,7 @@ module Simulation where
 import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game
 import Particle
+import Debug.Trace (traceShow)
 
 -- Simulation state including the particles, dragging state, and view state
 data State = State
@@ -74,36 +75,60 @@ showParticleInfo (Particle{..}, index) = "Particle " ++ show index ++ ": Pos=(" 
 
 -- Function to handle input events
 handleInput :: Event -> State -> State
-handleInput (EventKey (MouseButton LeftButton) Down _ (x, y)) state = state
-  { dragging = True
-  , dragStart = screenToWorld state (x, y)
-  , dragCurrent = screenToWorld state (x, y)
-  , dragMass = 1e6
-  }
+handleInput (EventKey (MouseButton LeftButton) Down _ (x, y)) state = 
+  let worldPos = screenToWorld state (x, y)
+  in traceShow ("Mouse Down at", (x, y), "World Position", worldPos) $
+     state
+      { dragging = True
+      , dragStart = worldPos
+      , dragCurrent = worldPos
+      , dragMass = 1e6
+      }
 handleInput (EventMotion (x, y)) state
-  | dragging state = state { dragCurrent = screenToWorld state (x, y) }
-  | panning state = state { viewTranslate = viewStart state `plus` ((x - fst (panStart state)) / viewScale state, (y - snd (panStart state)) / viewScale state) }
+  | dragging state =
+      let worldPos = screenToWorld state (x, y)
+      in traceShow ("Mouse Motion at", (x, y), "World Position", worldPos) $
+         state { dragCurrent = worldPos }
+  | panning state =
+      let newTranslate = (x - fst (panStart state) + fst (viewStart state), y - snd (panStart state) + snd (viewStart state))
+      in traceShow ("Panning to", newTranslate) $
+         state { viewTranslate = newTranslate }
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = 
   let (x0, y0) = dragStart state
       (xf, yf) = screenToWorld state (x, y)
       velocity = ((xf - x0) * 0.1, (yf - y0) * 0.1) -- Scale factor to adjust velocity
-  in state
+  in traceShow ("Mouse Up at", (x, y), "World Position", (xf, yf), "Velocity", velocity) $
+     state
      { dragging = False
      , particles = Particle (dragStart state) velocity (dragMass state) : particles state
      }
-handleInput (EventKey (MouseButton RightButton) Down _ (x, y)) state = state
+handleInput (EventKey (MouseButton RightButton) Down _ (x, y)) state = 
+  traceShow ("Start Panning at", (x, y)) $
+  state
   { panning = True
   , panStart = (x, y)
   , viewStart = viewTranslate state
   }
-handleInput (EventKey (MouseButton RightButton) Up _ _) state = state
+handleInput (EventKey (MouseButton RightButton) Up _ _) state = 
+  traceShow "Stop Panning" $
+  state
   { panning = False
   }
-handleInput (EventKey (MouseButton WheelUp) Down _ _) state = state
-  { viewScale = viewScale state * 1.1
+handleInput (EventKey (MouseButton WheelUp) Down _ _) state = 
+  let newScale = viewScale state * 1.1
+      newTranslate = (fst (viewTranslate state) * 1.1, snd (viewTranslate state) * 1.1)
+  in traceShow ("Zoom In", "New Scale", newScale, "New Translate", newTranslate) $
+     state
+  { viewScale = newScale
+  , viewTranslate = newTranslate
   }
-handleInput (EventKey (MouseButton WheelDown) Down _ _) state = state
-  { viewScale = viewScale state / 1.1
+handleInput (EventKey (MouseButton WheelDown) Down _ _) state = 
+  let newScale = viewScale state / 1.1
+      newTranslate = (fst (viewTranslate state) / 1.1, snd (viewTranslate state) / 1.1)
+  in traceShow ("Zoom Out", "New Scale", newScale, "New Translate", newTranslate) $
+     state
+  { viewScale = newScale
+  , viewTranslate = newTranslate
   }
 handleInput _ state = state
 
