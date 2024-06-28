@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Physics 
+module Physics
   ( withinRadius
   , updateParticle
   , acceleration
@@ -12,9 +12,14 @@ module Physics
   , minus
   ) where
 
-import Particle
 import Types
+import Data.Bifunctor
 
+gravityConstant :: Float
+gravityConstant = 6.67430e-9
+
+timeStep :: Float
+timeStep = 0.1
 
 withinRadius :: (Float, Float) -> (Float, Float) -> Float -> Bool
 withinRadius (x1, y1) (x2, y2) r = distance (x1, y1) (x2, y2) <= r
@@ -55,10 +60,12 @@ distance :: (Float, Float) -> (Float, Float) -> Float
 distance (x1, y1) (x2, y2) = sqrt ((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 screenToWorld :: State -> (Float, Float) -> (Float, Float)
-screenToWorld State{..} (sx, sy) = ((sx / viewScale - fst viewTranslate), (sy / viewScale - snd viewTranslate))
+screenToWorld State{..} (sx, sy) = bimap
+  ((sx / viewScale) -) ((sy / viewScale) -) viewTranslate
 
 worldToScreen :: State -> (Float, Float) -> (Float, Float)
-worldToScreen State{..} (wx, wy) = (wx * viewScale + fst viewTranslate, wy * viewScale + snd viewTranslate)
+worldToScreen State{..} (wx, wy) = bimap
+  ((wx * viewScale) +) ((wy * viewScale) +) viewTranslate
 
 plus :: (Float, Float) -> (Float, Float) -> (Float, Float)
 plus (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)

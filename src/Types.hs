@@ -1,11 +1,7 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Types 
-  ( State(..)
-  , timeStep
+  ( State(..),
+    Particle(..)
   ) where
-
-import Particle
 
 data State = State
   { particles    :: [Particle]
@@ -13,6 +9,7 @@ data State = State
   , dragStart    :: (Float, Float)
   , dragCurrent  :: (Float, Float)
   , dragMass     :: Float
+  , dragRadius   :: Float
   , viewScale    :: Float
   , viewTranslate :: (Float, Float)
   , panning      :: Bool
@@ -20,5 +17,8 @@ data State = State
   , viewStart    :: (Float, Float)
   } deriving (Eq, Show)
 
-timeStep :: Float
-timeStep = 0.1
+data Particle = Particle
+  { position :: (Float, Float)
+  , velocity :: (Float, Float)
+  , mass     :: Float
+  } deriving (Eq, Show)

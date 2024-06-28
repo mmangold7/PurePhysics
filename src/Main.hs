@@ -1,10 +1,6 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Main (main) where
 
-import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game
-import Particle
 import Simulation
 import Draw
 
