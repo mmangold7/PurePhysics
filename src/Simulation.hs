@@ -181,7 +181,7 @@ distance :: (Float, Float) -> (Float, Float) -> Float
 distance (x1, y1) (x2, y2) = sqrt ((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 screenToWorld :: State -> (Float, Float) -> (Float, Float)
-screenToWorld State{..} (sx, sy) = ((sx - fst viewTranslate) / viewScale, (sy - snd viewTranslate) / viewScale)
+screenToWorld State{..} (sx, sy) = ((sx / viewScale - fst viewTranslate), (sy / viewScale - snd viewTranslate))
 
 worldToScreen :: State -> (Float, Float) -> (Float, Float)
 worldToScreen State{..} (wx, wy) = (wx * viewScale + fst viewTranslate, wy * viewScale + snd viewTranslate)
