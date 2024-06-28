@@ -3,6 +3,8 @@
 module Physics
   ( withinRadius
   , updateParticle
+  , updatePosition
+  , updateVelocity
   , acceleration
   , gravitationalForce
   , distance
@@ -21,21 +23,27 @@ gravityConstant = 6.67430e-9
 timeStep :: Float
 timeStep = 0.1
 
-withinRadius :: (Float, Float) -> (Float, Float) -> Float -> Bool
+withinRadius :: Position -> Position -> Float -> Bool
 withinRadius (x1, y1) (x2, y2) r = distance (x1, y1) (x2, y2) <= r
 
 updateParticle :: [Particle] -> Particle -> Particle
 updateParticle particles p@Particle{..} =
-  if isNaN x || isNaN y || isNaN vx || isNaN vy || isNaN ax || isNaN ay
+  if any isNaN [x, y, vx, vy, ax, ay]
   then p
   else p
-    { position = (x + vx * timeStep, y + vy * timeStep)
-    , velocity = (vx + ax * timeStep, vy + ay * timeStep)
+    { position = updatePosition position velocity
+    , velocity = updateVelocity velocity (acceleration particles p)
     }
   where
     (x, y) = position
     (vx, vy) = velocity
     (ax, ay) = acceleration particles p
+
+updatePosition :: Position -> Velocity -> Position
+updatePosition (x, y) (vx, vy) = (x + vx * timeStep, y + vy * timeStep)
+
+updateVelocity :: Velocity -> (Float, Float) -> Velocity
+updateVelocity (vx, vy) (ax, ay) = (vx + ax * timeStep, vy + ay * timeStep)
 
 acceleration :: [Particle] -> Particle -> (Float, Float)
 acceleration particles p = (sum ax, sum ay)

@@ -1,24 +1,29 @@
 module Types 
   ( State(..),
-    Particle(..)
+    Particle(..),
+    Position,
+    Velocity
   ) where
+
+type Position = (Float, Float)
+type Velocity = (Float, Float)
 
 data State = State
   { particles    :: [Particle]
   , dragging     :: Bool
-  , dragStart    :: (Float, Float)
-  , dragCurrent  :: (Float, Float)
+  , dragStart    :: Position
+  , dragCurrent  :: Position
   , dragMass     :: Float
   , dragRadius   :: Float
   , viewScale    :: Float
-  , viewTranslate :: (Float, Float)
+  , viewTranslate :: Position
   , panning      :: Bool
-  , panStart     :: (Float, Float)
-  , viewStart    :: (Float, Float)
+  , panStart     :: Position
+  , viewStart    :: Position
   } deriving (Eq, Show)
 
 data Particle = Particle
-  { position :: (Float, Float)
-  , velocity :: (Float, Float)
+  { position :: Position
+  , velocity :: Velocity
   , mass     :: Float
   } deriving (Eq, Show)

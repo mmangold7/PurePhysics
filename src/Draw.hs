@@ -10,21 +10,26 @@ import Graphics.Gloss
 import Types
 
 drawState :: State -> Picture
-drawState state@State{..} = Pictures [view, hud]
-  where
-    view = Scale viewScale viewScale 
-           $ Translate (fst viewTranslate) (snd viewTranslate) 
-           $ Pictures (drawParticles particles ++ dragPicture)
-    hud = Translate (-390) 290 
+drawState state@State{} = Pictures [drawView state, drawHUD state]
+
+drawView :: State -> Picture
+drawView state@State{..} = Scale viewScale viewScale 
+           $ uncurry Translate viewTranslate 
+           $ Pictures (drawParticles particles ++ drawDragPicture state)
+
+drawHUD :: State -> Picture
+drawHUD State{..} = Translate (-390) 290 
           $ Scale 0.1 0.1 
           $ Color white 
-          $ Text (unlines (map showParticleInfo (zip particles [0..])))
-    dragPicture = if dragging
-                  then [drawArrow dragStart dragCurrent, drawDragMass dragStart dragMass]
-                  else []
+          $ Text (unlines (zipWith (curry showParticleInfo) particles [0..]))
 
 drawParticles :: [Particle] -> [Picture]
-drawParticles particles = map drawParticle particles
+drawParticles = map drawParticle
+
+drawDragPicture :: State -> [Picture]
+drawDragPicture State{..} 
+  | dragging = [drawArrow dragStart dragCurrent, drawDragMass dragStart dragMass]
+  | otherwise = []
 
 drawArrow :: (Float, Float) -> (Float, Float) -> Picture
 drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
@@ -32,7 +37,7 @@ drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
   , Translate x2 y2 $ Rotate (angle x1 y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
   ]
   where
-    angle x1 y1 x2 y2 = 180 * atan2 (y1 - y2) (x2 - x1) / pi
+    angle anglex1 angley1 anglex2 angley2 = 180 * atan2 (angley1 - angley2) (anglex2 - anglex1) / pi
 
 drawDragMass :: (Float, Float) -> Float -> Picture
 drawDragMass (x, y) mass = Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))
