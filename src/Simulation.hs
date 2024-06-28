@@ -45,7 +45,8 @@ handleInput (EventMotion (x, y)) state
       in traceShow ("Mouse Motion at", (x, y), "World Position", worldPos) $
          state { dragCurrent = worldPos }
   | panning state =
-      let newTranslate = (x - fst (panStart state) + fst (viewStart state), y - snd (panStart state) + snd (viewStart state))
+      let newTranslate = ( (x - fst (panStart state)) / viewScale state + fst (viewStart state)
+                         , (y - snd (panStart state)) / viewScale state + snd (viewStart state))
       in traceShow ("Panning to", newTranslate) $
          state { viewTranslate = newTranslate }
 handleInput (EventKey (MouseButton LeftButton) Up _ (x, y)) state = 
