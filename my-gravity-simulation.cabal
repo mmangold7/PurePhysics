@@ -34,3 +34,6 @@ executable my-gravity-simulation
                        -Wredundant-constraints
   other-modules:       Particle
                      , Simulation
+                     , Draw
+                     , Physics
+                     , Types

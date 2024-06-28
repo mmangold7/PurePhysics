@@ -6,8 +6,8 @@ import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game
 import Particle
 import Simulation
+import Draw
 
--- Main function
 main :: IO ()
 main = play
   (InWindow "2D Gravity Simulation" (800, 600) (100, 100))
