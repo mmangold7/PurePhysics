@@ -21,11 +21,29 @@ import Physics
 import Types
 import Draw
 
+centralMass :: Float
+centralMass = 1e8 -- Central massive particle's mass
+
+ringRadius :: Float
+ringRadius = 200 -- Radius of the ring
+
+numParticles :: Int
+numParticles = 10 -- Number of particles in the ring
+
+particleMass :: Float
+particleMass = 1e6 -- Mass of each particle in the ring
+
 initialParticles :: [Particle]
-initialParticles = 
-  [ Particle (100, 200) (0, -1) 1e6
-  , Particle (-100, -200) (0, 1) 1e6
-  ]
+initialParticles = centralParticle : ringParticles
+  where
+    centralParticle = Particle (0, 0) (0, 0) centralMass
+    ringParticles = [Particle (x, y) (vx, vy) particleMass | i <- [0..numParticles-1], 
+                     let angle = 2 * pi * fromIntegral i / fromIntegral numParticles
+                         x = ringRadius * cos angle
+                         y = ringRadius * sin angle
+                         vx = -sqrt (gravityConstant * centralMass / ringRadius) * sin angle
+                         vy = sqrt (gravityConstant * centralMass / ringRadius) * cos angle]
+
 
 initialDragMass :: Float
 initialDragMass = 1e6
