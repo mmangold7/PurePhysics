@@ -83,10 +83,10 @@ drawDragPicture State{..}
 drawArrow :: (Float, Float) -> (Float, Float) -> Picture
 drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
   [ Line [(x1, y1), (x2, y2)]
-  , Translate x2 y2 $ Rotate (angle y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
+  , Translate x2 y2 $ Rotate (angle x1 y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
   ]
   where
-    angle angley1 anglex2 angley2 = 180 * atan2 (angley1 - angley2) (anglex2 - angley1) / pi
+    angle x1 y1 x2 y2 = 180 * atan2 (y1 - y2) (x2 - x1) / pi
 
 drawDragMass :: (Float, Float) -> Float -> Picture
 drawDragMass (x, y) mass = Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))
