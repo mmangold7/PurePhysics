@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Simulation
   ( initialState
   , initialParticles
@@ -66,14 +64,13 @@ handleInput event state = case event of
   _ -> state
 
 handleMouseDown :: Float -> Float -> State -> State
-handleMouseDown x y state =
-  if withinButton (x, y) (buttonPos state) (buttonSize state)
-  then state { showDebug = not (showDebug state) }
-  else if withinButton (x, y) (drawModeButtonPos state) (drawModeButtonSize state)
-       then state { drawMode = nextDrawMode (drawMode state) }
-       else let worldPos = screenToWorld state (x, y)
-            in traceShow ("Mouse Down at", (x, y), "World Position", worldPos) $
-               state { dragging = True, dragStart = worldPos, dragCurrent = worldPos, dragMass = initialDragMass }
+handleMouseDown x y state
+  | withinButton (x, y) (buttonPos state) (buttonSize state) = state { showDebug = not (showDebug state) }
+  | withinButton (x, y) (drawModeButtonPos state) (drawModeButtonSize state) = state { drawMode = nextDrawMode (drawMode state) }
+  | otherwise =
+      let worldPos = screenToWorld state (x, y)
+      in traceShow ("Mouse Down at", (x, y), "World Position", worldPos) $
+         state { dragging = True, dragStart = worldPos, dragCurrent = worldPos, dragMass = initialDragMass }
 
 handleMouseMotion :: Float -> Float -> State -> State
 handleMouseMotion x y state
