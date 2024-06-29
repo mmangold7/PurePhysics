@@ -15,15 +15,16 @@ drawState state@State{} = Pictures [drawView state, drawHUD state]
 drawView :: State -> Picture
 drawView state@State{..} = Scale viewScale viewScale 
            $ uncurry Translate viewTranslate 
-           $ Pictures (concatMap (drawParticleWithInfo showDebug) particles ++ drawDragPicture state)
+           $ Pictures (map (drawParticleWithMode drawMode) particles ++ drawDragPicture state)
 
 drawHUD :: State -> Picture
-drawHUD state@State{} = Pictures
+drawHUD state@State{..} = Pictures
   [ Translate (-390) 290 
     $ Scale 0.1 0.1 
     $ Color white 
     $ Text "HUD Information" -- Modify this to show only general HUD information
   , drawButton state
+  , drawModeButton state
   ]
 
 drawButton :: State -> Picture
@@ -37,17 +38,33 @@ drawButton State{..} =
      , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text buttonText
      ]
 
-drawParticleWithInfo :: Bool -> Particle -> [Picture]
-drawParticleWithInfo showDebug particle@Particle{..} =
-  let basePicture = Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))
-  in if showDebug 
-     then [basePicture, Translate (x + 10) (y + 10) $ Scale 0.1 0.1 $ Color white $ Text (showParticleInfo particle)]
-     else [basePicture]
-  where
-    (x, y) = position
+drawModeButton :: State -> Picture
+drawModeButton State{..} =
+  let (bx, by) = drawModeButtonPos
+      (bw, bh) = drawModeButtonSize
+      modeText = case drawMode of
+                   Filled -> "Mode: Filled"
+                   Outline -> "Mode: Outline"
+                   Crosshair -> "Mode: Crosshair"
+  in Translate bx by $ Pictures 
+     [ Color blue $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
+     , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text modeText
+     ]
 
-showParticleInfo :: Particle -> String
-showParticleInfo Particle{..} = 
+drawParticleWithMode :: DrawingMode -> Particle -> Picture
+drawParticleWithMode mode particle@Particle{..} =
+  let (x, y) = position
+      radius = determineParticleRadius mass
+  in Translate x y $ case mode of
+       Filled -> Color (determineParticleColor mass) (circleSolid radius)
+       Outline -> Color (determineParticleColor mass) (circle radius)
+       Crosshair -> Pictures 
+         [ Color (determineParticleColor mass) $ Line [(-radius, 0), (radius, 0)]
+         , Color (determineParticleColor mass) $ Line [(0, -radius), (0, radius)]
+         ]
+
+showParticleInfo :: (Particle, Int) -> String
+showParticleInfo (Particle{..}, index) = 
   "Pos=(" ++ show (round x :: Integer) ++ "," ++ show (round y :: Integer) 
   ++ "), Vel=(" ++ show (round vx :: Integer) ++ "," ++ show (round vy :: Integer) ++ "), Mass=" ++ show (round mass :: Integer)
   where
@@ -62,10 +79,10 @@ drawDragPicture State{..}
 drawArrow :: (Float, Float) -> (Float, Float) -> Picture
 drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
   [ Line [(x1, y1), (x2, y2)]
-  , Translate x2 y2 $ Rotate (angle y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
+  , Translate x2 y2 $ Rotate (angle x1 y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
   ]
   where
-    angle angley1 anglex2 angley2 = 180 * atan2 (angley1 - angley2) (anglex2 - angley1) / pi
+    angle anglex1 angley1 anglex2 angley2 = 180 * atan2 (angley1 - angley2) (anglex2 - angley1) / pi
 
 drawDragMass :: (Float, Float) -> Float -> Picture
 drawDragMass (x, y) mass = Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))

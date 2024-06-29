@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Simulation
   ( initialState
   , initialParticles
@@ -44,8 +46,11 @@ initialState = State
   , panStart = (0, 0)
   , viewStart = (0, 0)
   , showDebug = False
-  , buttonPos = (-350, 230)  -- Position of the button, adjusted to avoid HUD text
-  , buttonSize = (120, 40)   -- Size of the button (width, height)
+  , drawMode = Filled -- Initial drawing mode
+  , buttonPos = (-350, 230)  -- Position of the debug button
+  , buttonSize = (120, 40)   -- Size of the debug button
+  , drawModeButtonPos = (-350, 180) -- Position of the draw mode button
+  , drawModeButtonSize = (180, 40) -- Size of the draw mode button
   }
 
 handleInput :: Event -> State -> State
@@ -64,9 +69,11 @@ handleMouseDown :: Float -> Float -> State -> State
 handleMouseDown x y state =
   if withinButton (x, y) (buttonPos state) (buttonSize state)
   then state { showDebug = not (showDebug state) }
-  else let worldPos = screenToWorld state (x, y)
-       in traceShow ("Mouse Down at", (x, y), "World Position", worldPos) $
-          state { dragging = True, dragStart = worldPos, dragCurrent = worldPos, dragMass = initialDragMass }
+  else if withinButton (x, y) (drawModeButtonPos state) (drawModeButtonSize state)
+       then state { drawMode = nextDrawMode (drawMode state) }
+       else let worldPos = screenToWorld state (x, y)
+            in traceShow ("Mouse Down at", (x, y), "World Position", worldPos) $
+               state { dragging = True, dragStart = worldPos, dragCurrent = worldPos, dragMass = initialDragMass }
 
 handleMouseMotion :: Float -> Float -> State -> State
 handleMouseMotion x y state
@@ -86,6 +93,7 @@ handleMouseMotion x y state
 handleMouseUp :: Float -> Float -> State -> State
 handleMouseUp x y state =
   if not (withinButton (x, y) (buttonPos state) (buttonSize state))
+     && not (withinButton (x, y) (drawModeButtonPos state) (drawModeButtonSize state))
   then let (x0, y0) = dragStart state
            (xf, yf) = screenToWorld state (x, y)
            prospectiveVelocity = ((xf - x0) * 0.1, (yf - y0) * 0.1) -- Scale factor to adjust velocity
@@ -129,3 +137,8 @@ updateState _ state =
 withinButton :: (Float, Float) -> (Float, Float) -> (Float, Float) -> Bool
 withinButton (x, y) (bx, by) (bw, bh) = 
   x >= bx && x <= bx + bw && y >= by && y <= by + bh
+
+nextDrawMode :: DrawingMode -> DrawingMode
+nextDrawMode Filled = Outline
+nextDrawMode Outline = Crosshair
+nextDrawMode Crosshair = Filled
