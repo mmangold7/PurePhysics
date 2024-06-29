@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Simulation
   ( initialState
   , initialParticles

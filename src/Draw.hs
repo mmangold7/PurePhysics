@@ -18,7 +18,7 @@ drawView state@State{..} = Scale viewScale viewScale
            $ Pictures (concatMap (drawParticleWithInfo showDebug) particles ++ drawDragPicture state)
 
 drawHUD :: State -> Picture
-drawHUD state@State{..} = Pictures
+drawHUD state@State{} = Pictures
   [ Translate (-390) 290 
     $ Scale 0.1 0.1 
     $ Color white 
@@ -41,13 +41,13 @@ drawParticleWithInfo :: Bool -> Particle -> [Picture]
 drawParticleWithInfo showDebug particle@Particle{..} =
   let basePicture = Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))
   in if showDebug 
-     then [basePicture, Translate (x + 10) (y + 10) $ Scale 0.1 0.1 $ Color white $ Text (showParticleInfo (particle, 0))]
+     then [basePicture, Translate (x + 10) (y + 10) $ Scale 0.1 0.1 $ Color white $ Text (showParticleInfo particle)]
      else [basePicture]
   where
     (x, y) = position
 
-showParticleInfo :: (Particle, Int) -> String
-showParticleInfo (Particle{..}, index) = 
+showParticleInfo :: Particle -> String
+showParticleInfo Particle{..} = 
   "Pos=(" ++ show (round x :: Integer) ++ "," ++ show (round y :: Integer) 
   ++ "), Vel=(" ++ show (round vx :: Integer) ++ "," ++ show (round vy :: Integer) ++ "), Mass=" ++ show (round mass :: Integer)
   where
@@ -62,10 +62,10 @@ drawDragPicture State{..}
 drawArrow :: (Float, Float) -> (Float, Float) -> Picture
 drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
   [ Line [(x1, y1), (x2, y2)]
-  , Translate x2 y2 $ Rotate (angle x1 y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
+  , Translate x2 y2 $ Rotate (angle y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
   ]
   where
-    angle anglex1 angley1 anglex2 angley2 = 180 * atan2 (angley1 - angley2) (anglex2 - angley1) / pi
+    angle angley1 anglex2 angley2 = 180 * atan2 (angley1 - angley2) (anglex2 - angley1) / pi
 
 drawDragMass :: (Float, Float) -> Float -> Picture
 drawDragMass (x, y) mass = Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))
