@@ -12,6 +12,7 @@ module Physics
   , worldToScreen
   , plus
   , minus
+  , gravityConstant
   ) where
 
 import Types

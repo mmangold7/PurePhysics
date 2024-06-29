@@ -1,6 +1,15 @@
 module Simulation
   ( initialState
+  , initialParticles
+  , initialDragMass
   , handleInput
+  , handleMouseDown
+  , handleMouseMotion
+  , handleMouseUp
+  , handleStartPanning
+  , handleStopPanning
+  , handleZoomIn
+  , handleZoomOut
   , updateState
   ) where
 
