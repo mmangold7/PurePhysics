@@ -30,9 +30,11 @@ drawButton :: State -> Picture
 drawButton State{..} =
   let (bx, by) = buttonPos
       (bw, bh) = buttonSize
+      buttonColor = if showDebug then green else red
+      buttonText = if showDebug then "Debug ON" else "Debug OFF"
   in Translate bx by $ Pictures 
-     [ Color (greyN 0.5) $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
-     , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text "Toggle Debug"
+     [ Color buttonColor $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
+     , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text buttonText
      ]
 
 drawParticleWithInfo :: Bool -> Particle -> [Picture]

@@ -87,11 +87,13 @@ handleMouseMotion x y state
 
 handleMouseUp :: Float -> Float -> State -> State
 handleMouseUp x y state =
-  let (x0, y0) = dragStart state
-      (xf, yf) = screenToWorld state (x, y)
-      prospectiveVelocity = ((xf - x0) * 0.1, (yf - y0) * 0.1) -- Scale factor to adjust velocity
-  in traceShow ("Mouse Up at", (x, y), "World Position", (xf, yf), "Velocity", prospectiveVelocity) $
-     state { dragging = False, particles = Particle (dragStart state) prospectiveVelocity (dragMass state) : particles state }
+  if not (withinButton (x, y) (buttonPos state) (buttonSize state))
+  then let (x0, y0) = dragStart state
+           (xf, yf) = screenToWorld state (x, y)
+           prospectiveVelocity = ((xf - x0) * 0.1, (yf - y0) * 0.1) -- Scale factor to adjust velocity
+       in traceShow ("Mouse Up at", (x, y), "World Position", (xf, yf), "Velocity", prospectiveVelocity) $
+          state { dragging = False, particles = Particle (dragStart state) prospectiveVelocity (dragMass state) : particles state }
+  else state { dragging = False }
 
 handleStartPanning :: Float -> Float -> State -> State
 handleStartPanning x y state =
