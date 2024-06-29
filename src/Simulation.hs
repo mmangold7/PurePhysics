@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Simulation
   ( initialState
   , initialParticles
@@ -21,6 +23,15 @@ import Physics
 import Types
 import Draw
 
+initialParticles :: [Particle]
+initialParticles = 
+  [ Particle (100, 200) (0, -1) 1e6
+  , Particle (-100, -200) (0, 1) 1e6
+  ]
+
+initialDragMass :: Float
+initialDragMass = 1e6
+
 initialState :: State
 initialState = State
   { particles = initialParticles
@@ -34,16 +45,10 @@ initialState = State
   , panning = False
   , panStart = (0, 0)
   , viewStart = (0, 0)
+  , showDebug = False
+  , buttonPos = (-350, 230)  -- Position of the button, adjusted to avoid HUD text
+  , buttonSize = (120, 40)   -- Size of the button (width, height)
   }
-
-initialParticles :: [Particle]
-initialParticles = 
-  [ Particle (100, 200) (0, -1) 1e6
-  , Particle (-100, -200) (0, 1) 1e6
-  ]
-
-initialDragMass :: Float
-initialDragMass = 1e6
 
 handleInput :: Event -> State -> State
 handleInput event state = case event of
@@ -54,13 +59,16 @@ handleInput event state = case event of
   (EventKey (MouseButton RightButton) Up _ _) -> handleStopPanning state
   (EventKey (MouseButton WheelUp) Down _ _) -> handleZoomIn state
   (EventKey (MouseButton WheelDown) Down _ _) -> handleZoomOut state
+  (EventKey (Char 'd') Down _ _) -> state { showDebug = not (showDebug state) }
   _ -> state
 
 handleMouseDown :: Float -> Float -> State -> State
-handleMouseDown x y state = 
-  let worldPos = screenToWorld state (x, y)
-  in traceShow ("Mouse Down at", (x, y), "World Position", worldPos) $
-     state { dragging = True, dragStart = worldPos, dragCurrent = worldPos, dragMass = initialDragMass }
+handleMouseDown x y state =
+  if withinButton (x, y) (buttonPos state) (buttonSize state)
+  then state { showDebug = not (showDebug state) }
+  else let worldPos = screenToWorld state (x, y)
+       in traceShow ("Mouse Down at", (x, y), "World Position", worldPos) $
+          state { dragging = True, dragStart = worldPos, dragCurrent = worldPos, dragMass = initialDragMass }
 
 handleMouseMotion :: Float -> Float -> State -> State
 handleMouseMotion x y state
@@ -117,3 +125,7 @@ updateState _ state =
                      else dragMass state
        in state { dragMass = newMass, particles = map (updateParticle (particles state)) (particles state) }
   else state { particles = map (updateParticle (particles state)) (particles state) }
+
+withinButton :: (Float, Float) -> (Float, Float) -> (Float, Float) -> Bool
+withinButton (x, y) (bx, by) (bw, bh) = 
+  x >= bx && x <= bx + bw && y >= by && y <= by + bh

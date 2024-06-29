@@ -20,6 +20,9 @@ data State = State
   , panning      :: Bool
   , panStart     :: Position
   , viewStart    :: Position
+  , showDebug    :: Bool
+  , buttonPos    :: Position
+  , buttonSize   :: (Float, Float)
   } deriving (Eq, Show)
 
 data Particle = Particle
