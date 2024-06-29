@@ -15,16 +15,29 @@ drawState state@State{} = Pictures [drawView state, drawHUD state]
 drawView :: State -> Picture
 drawView state@State{..} = Scale viewScale viewScale 
            $ uncurry Translate viewTranslate 
-           $ Pictures (drawParticles particles ++ drawDragPicture state)
+           $ Pictures (concatMap (drawParticleWithInfo state) particles ++ drawDragPicture state)
 
 drawHUD :: State -> Picture
 drawHUD State{..} = Translate (-390) 290 
           $ Scale 0.1 0.1 
           $ Color white 
-          $ Text (unlines (zipWith (curry showParticleInfo) particles [0..]))
+          $ Text "HUD Information" -- Modify this to show only general HUD information
 
-drawParticles :: [Particle] -> [Picture]
-drawParticles = map drawParticle
+drawParticleWithInfo :: State -> Particle -> [Picture]
+drawParticleWithInfo state particle@Particle{..} =
+  [ Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))
+  , Translate (x + 10) (y + 10) $ Scale 0.1 0.1 $ Color white $ Text (showParticleInfo (particle, 0))
+  ]
+  where
+    (x, y) = position
+
+showParticleInfo :: (Particle, Int) -> String
+showParticleInfo (Particle{..}, index) = 
+  "Pos=(" ++ show (round x :: Integer) ++ "," ++ show (round y :: Integer) 
+  ++ "), Vel=(" ++ show (round vx :: Integer) ++ "," ++ show (round vy :: Integer) ++ "), Mass=" ++ show (round mass :: Integer)
+  where
+    (x, y) = position
+    (vx, vy) = velocity
 
 drawDragPicture :: State -> [Picture]
 drawDragPicture State{..} 
@@ -42,14 +55,6 @@ drawArrow (x1, y1) (x2, y2) = Color red $ Pictures
 drawDragMass :: (Float, Float) -> Float -> Picture
 drawDragMass (x, y) mass = Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))
 
-showParticleInfo :: (Particle, Int) -> String
-showParticleInfo (Particle{..}, index) = 
-  "Particle " ++ show index ++ ": Pos=(" ++ show (round x :: Integer) ++ "," ++ show (round y :: Integer) 
-  ++ "), Vel=(" ++ show (round vx :: Integer) ++ "," ++ show (round vy :: Integer) ++ "), Mass=" ++ show (round mass :: Integer)
-  where
-    (x, y) = position
-    (vx, vy) = velocity
-
 determineParticleColor :: Float -> Color
 determineParticleColor mass = makeColor r g b 1.0
   where
@@ -60,8 +65,3 @@ determineParticleColor mass = makeColor r g b 1.0
 
 determineParticleRadius :: Float -> Float
 determineParticleRadius mass = 5 + logBase 2 (mass / 1e6)
-
-drawParticle :: Particle -> Picture
-drawParticle Particle{..} = Translate x y (Color (determineParticleColor mass) (circleSolid (determineParticleRadius mass)))
-  where
-    (x, y) = position
