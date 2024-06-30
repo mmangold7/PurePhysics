@@ -7,17 +7,6 @@ module Draw
   ) where
 
 import Graphics.Gloss
-    ( blue,
-      green,
-      red,
-      white,
-      circle,
-      circleSolid,
-      makeColor,
-      Color,
-      Picture(Color, Scale, Text, Blank, Pictures, Line, Rotate, Polygon,
-              Translate) )
-import Data.Bifunctor
 import Types
 import Physics (acceleration)
 
@@ -30,19 +19,20 @@ drawView state@State{..} = Scale viewScale viewScale
            $ Pictures (map (drawParticleWithMode drawMode viewScale showDebug particles) particles ++ drawDragPicture state)
 
 drawHUD :: State -> Picture
-drawHUD state@State{} = Pictures
+drawHUD state@State{..} =
+  Pictures
   [ Translate (-390) 290 
     $ Scale 0.1 0.1 
     $ Color white 
-    $ Text "HUD Information" -- Modify this to show only general HUD information
-  , drawButton state
-  , drawModeButton state
+    $ Text "HUD Information"
+  , drawButton state (adjustedButtonPos state)
+  , drawModeButton state (adjustedDrawModeButtonPos state)
+  , drawSlider state (adjustedSliderPos state)
   ]
 
-drawButton :: State -> Picture
-drawButton State{..} =
-  let (bx, by) = buttonPos
-      (bw, bh) = buttonSize
+drawButton :: State -> (Float, Float) -> Picture
+drawButton State{..} (bx, by) =
+  let (bw, bh) = buttonSize
       buttonColor = if showDebug then green else red
       buttonText = if showDebug then "Debug ON" else "Debug OFF"
   in Translate bx by $ Pictures 
@@ -50,10 +40,9 @@ drawButton State{..} =
      , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text buttonText
      ]
 
-drawModeButton :: State -> Picture
-drawModeButton State{..} =
-  let (bx, by) = drawModeButtonPos
-      (bw, bh) = drawModeButtonSize
+drawModeButton :: State -> (Float, Float) -> Picture
+drawModeButton State{..} (bx, by) =
+  let (bw, bh) = drawModeButtonSize
       modeText = case drawMode of
                    Filled -> "Mode: Filled"
                    Outline -> "Mode: Outline"
@@ -61,6 +50,18 @@ drawModeButton State{..} =
   in Translate bx by $ Pictures 
      [ Color blue $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
      , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text modeText
+     ]
+
+drawSlider :: State -> (Float, Float) -> Picture
+drawSlider State{..} (sx, sy) =
+  let (sw, sh) = sliderSize
+      halfWidth = sw / 2
+      sliderValuePos = sx + sliderValue * sw
+      originPos = sx + halfWidth
+  in Pictures
+     [ Translate sx sy $ Color white $ Polygon [(0, 0), (sw, 0), (sw, sh), (0, sh)]
+     , Translate originPos sy $ Color blue $ Polygon [(0, 0), (2, 0), (2, sh), (0, sh)] -- Origin line
+     , Translate sliderValuePos sy $ Color red $ Polygon [(0, 0), (10, 0), (10, sh), (0, sh)]
      ]
 
 drawParticleWithMode :: DrawingMode -> Float -> Bool -> [Particle] -> Particle -> Picture
@@ -74,9 +75,9 @@ drawParticleWithMode mode inputScale showDebug allParticles particle@Particle{..
           [ Color (determineParticleColor mass) $ Line [(-radius, 0), (radius, 0)]
           , Color (determineParticleColor mass) $ Line [(0, -radius), (0, radius)]
           ]
-      velocityArrow = drawArrow (x, y) (bimap ((+) x) ((+) y) velocity) green
+      velocityArrow = drawArrow (x, y) ((x + fst velocity), (y + snd velocity)) green
       acc = acceleration allParticles particle
-      accelerationArrow = drawArrow (x, y) (bimap ((+) x) ((+) y) acc) red
+      accelerationArrow = drawArrow (x, y) ((x + fst acc), (y + snd acc)) red
       debugInfo = Translate (x + radius + 10) (y + radius + 10) $ Scale 0.1 0.1 $ Color white $ Text (showParticleInfo (particle, 0))
   in Pictures [Translate x y basePicture, velocityArrow, accelerationArrow, if showDebug then debugInfo else Blank]
 
