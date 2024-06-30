@@ -7,6 +7,7 @@ module Draw
   ) where
 
 import Graphics.Gloss
+import Data.Bifunctor
 import Types
 import Physics (acceleration)
 
@@ -19,7 +20,7 @@ drawView state@State{..} = Scale viewScale viewScale
            $ Pictures (map (drawParticleWithMode drawMode viewScale showDebug particles) particles ++ drawDragPicture state)
 
 drawHUD :: State -> Picture
-drawHUD state@State{..} =
+drawHUD state@State{} =
   Pictures
   [ Translate (-390) 290 
     $ Scale 0.1 0.1 
@@ -75,14 +76,14 @@ drawParticleWithMode mode inputScale showDebug allParticles particle@Particle{..
           [ Color (determineParticleColor mass) $ Line [(-radius, 0), (radius, 0)]
           , Color (determineParticleColor mass) $ Line [(0, -radius), (0, radius)]
           ]
-      velocityArrow = drawArrow (x, y) ((x + fst velocity), (y + snd velocity)) green
+      velocityArrow = drawArrow (x, y) (bimap (x +) (y +) velocity) green
       acc = acceleration allParticles particle
-      accelerationArrow = drawArrow (x, y) ((x + fst acc), (y + snd acc)) red
+      accelerationArrow = drawArrow (x, y)  (bimap (x +) (y +) acc) red
       debugInfo = Translate (x + radius + 10) (y + radius + 10) $ Scale 0.1 0.1 $ Color white $ Text (showParticleInfo (particle, 0))
   in Pictures [Translate x y basePicture, velocityArrow, accelerationArrow, if showDebug then debugInfo else Blank]
 
 drawArrow :: (Float, Float) -> (Float, Float) -> Color -> Picture
-drawArrow (x1, y1) (x2, y2) color = Color color $ Pictures
+drawArrow (x1, y1) (x2, y2) inputColor = Color inputColor $ Pictures
   [ Line [(x1, y1), (x2, y2)]
   , Translate x2 y2 $ Rotate (angle x1 y1 x2 y2) $ Polygon [(0, 0), (-10, 5), (-10, -5)]
   ]

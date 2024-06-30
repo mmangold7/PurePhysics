@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Simulation
   ( initialState
   , initialParticles
@@ -16,23 +14,22 @@ module Simulation
   ) where
 
 import Graphics.Gloss.Interface.Pure.Game
-import Debug.Trace
 import Data.Bifunctor
 import Physics
 import Types
 import Draw
 
 centralMass :: Float
-centralMass = 1e8 -- Central massive particle's mass
+centralMass = 1e8
 
 ringRadius :: Float
-ringRadius = 200 -- Radius of the ring
+ringRadius = 200
 
 numParticles :: Int
-numParticles = 10 -- Number of particles in the ring
+numParticles = 10
 
 particleMass :: Float
-particleMass = 1e6 -- Mass of each particle in the ring
+particleMass = 1e6
 
 initialParticles :: [Particle]
 initialParticles = centralParticle : ringParticles
@@ -42,7 +39,7 @@ initialParticles = centralParticle : ringParticles
                      let angle = 2 * pi * fromIntegral i / fromIntegral numParticles
                          x = ringRadius * cos angle
                          y = ringRadius * sin angle
-                         vx = -sqrt (gravityConstant * centralMass / ringRadius) * sin angle
+                         vx = - (sqrt (gravityConstant * centralMass / ringRadius) * sin angle)
                          vy = sqrt (gravityConstant * centralMass / ringRadius) * cos angle]
 
 initialDragMass :: Float
@@ -69,10 +66,10 @@ initialState = State
   , drawModeButtonSize = (180, 40)
   , timeStep = 0.0
   , sliderPos = (-350, -250)
-  , sliderSize = (400, 20) -- Double the length of the slider
-  , sliderValue = 0.5 -- Start the slider in the middle (0 position)
+  , sliderSize = (400, 20)
+  , sliderValue = 0.5
   , isSliderActive = False
-  , windowSize = (800, 600) -- Initial window size
+  , windowSize = (800, 600)
   }
 
 handleInput :: Event -> State -> State
@@ -112,8 +109,8 @@ handleMouseMotion x y state
       let (sx, _) = adjustedSliderPos state
           (sw, _) = sliderSize state
           newValue = (x - sx) / sw
-          clampedValue = max 0 (min 1 newValue) -- Ensure the value stays within 0 and 1
-          timeStepValue = -0.9 + clampedValue * 1.8 -- Map the slider value to range -0.9 to 0.9
+          clampedValue = max 0 (min 1 newValue)
+          timeStepValue = -0.9 + clampedValue * 1.8
       in state { sliderValue = clampedValue, timeStep = timeStepValue }
   | otherwise = state
 
@@ -124,7 +121,7 @@ handleMouseUp x y state =
      && not (withinSlider (x, y) (adjustedSliderPos state) (sliderSize state))
   then let (x0, y0) = dragStart state
            (xf, yf) = screenToWorld state (x, y)
-           prospectiveVelocity = ((xf - x0) * 0.1, (yf - y0) * 0.1) -- Scale factor to adjust velocity
+           prospectiveVelocity = ((xf - x0) * 0.1, (yf - y0) * 0.1)
        in state { dragging = False, particles = Particle (dragStart state) prospectiveVelocity (dragMass state) : particles state, isSliderActive = False }
   else state { dragging = False, isSliderActive = False }
 

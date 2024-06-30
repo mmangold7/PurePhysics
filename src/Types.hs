@@ -37,7 +37,7 @@ data State = State
   , sliderSize   :: (Float, Float)
   , sliderValue  :: Float
   , isSliderActive :: Bool
-  , windowSize   :: (Int, Int) -- Initial window size
+  , windowSize   :: (Int, Int)
   } deriving (Eq, Show)
 
 data DrawingMode = Filled | Outline | Crosshair deriving (Eq, Show)
@@ -49,16 +49,16 @@ data Particle = Particle
   } deriving (Eq, Show)
 
 adjustedButtonPos :: State -> (Float, Float)
-adjustedButtonPos state@State{..} =
+adjustedButtonPos State{..} =
   let (winWidth, winHeight) = windowSize
-  in (-fromIntegral winWidth / 2 + 20, fromIntegral winHeight / 2 - 60)
+  in (- (fromIntegral winWidth / 2) + 20, fromIntegral winHeight / 2 - 60)
 
 adjustedDrawModeButtonPos :: State -> (Float, Float)
-adjustedDrawModeButtonPos state@State{..} =
+adjustedDrawModeButtonPos State{..} =
   let (winWidth, winHeight) = windowSize
-  in (-fromIntegral winWidth / 2 + 20, fromIntegral winHeight / 2 - 110)
+  in (- (fromIntegral winWidth / 2) + 20, fromIntegral winHeight / 2 - 110)
 
 adjustedSliderPos :: State -> (Float, Float)
-adjustedSliderPos state@State{..} =
+adjustedSliderPos State{..} =
   let (winWidth, winHeight) = windowSize
-  in (-fromIntegral winWidth / 2 + 20, -fromIntegral winHeight / 2 + 40)
+  in (- (fromIntegral winWidth / 2) + 20, - (fromIntegral winHeight / 2) + 40)
