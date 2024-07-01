@@ -22,6 +22,7 @@ library
                      , gloss
                      , OpenGL
                      , GLUT
+                     , random
   exposed-modules:     Simulation
                      , Draw
                      , Physics
@@ -45,6 +46,7 @@ executable my-gravity-simulation
                      , OpenGL
                      , GLUT
                      , my-gravity-simulation
+                     , random
   other-modules:       Draw
                      , Physics
                      , Simulation
@@ -68,5 +70,6 @@ test-suite my-gravity-simulation-tests
                      , hspec
                      , my-gravity-simulation
                      , gloss
+                     , random
   other-modules:       PhysicsSpec
                      , SimulationSpec

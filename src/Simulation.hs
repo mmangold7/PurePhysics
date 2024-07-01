@@ -1,6 +1,9 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Simulation
   ( initialState
   , initialParticles
+  , initialMultipleSystems
   , initialDragMass
   , handleInput
   , handleMouseDown
@@ -34,13 +37,28 @@ particleMass = 1e6
 initialParticles :: [Particle]
 initialParticles = centralParticle : ringParticles
   where
-    centralParticle = Particle (0, 0) (0, 0) centralMass
-    ringParticles = [Particle (x, y) (vx, vy) particleMass | i <- [0..numParticles-1], 
+    centralParticle = Particle (0, 0) (0, 0) centralMass (determineParticleColor centralMass)
+    ringParticles = [Particle (x, y) (vx, vy) particleMass (determineParticleColor particleMass) | i <- [0..numParticles-1], 
                      let angle = 2 * pi * fromIntegral i / fromIntegral numParticles
                          x = ringRadius * cos angle
                          y = ringRadius * sin angle
-                         vx = - (sqrt (gravityConstant * centralMass / ringRadius) * sin angle)
+                         vx = -sqrt (gravityConstant * centralMass / ringRadius) * sin angle
                          vy = sqrt (gravityConstant * centralMass / ringRadius) * cos angle]
+
+initialMultipleSystems :: [Particle]
+initialMultipleSystems = concatMap createSystem [(0, 0), (1000, 1000), (-1000, -1000)]
+  where
+    createSystem (cx, cy) = centralStar : planets
+      where
+        centralStar = Particle (cx, cy) (0, 0) centralMass (determineParticleColor centralMass)
+        planets = [Particle (x + cx, y + cy) (vx, vy) planetMass (determineParticleColor planetMass) | i <- [1..5],
+                   let angle = 2 * pi * fromIntegral i / 5
+                       distance = 200 + fromIntegral (i * 50)
+                       x = distance * cos angle
+                       y = distance * sin angle
+                       vx = -sqrt (gravityConstant * centralMass / distance) * sin angle
+                       vy = sqrt (gravityConstant * centralMass / distance) * cos angle]
+        planetMass = 1e6
 
 initialDragMass :: Float
 initialDragMass = 1e6
@@ -60,10 +78,19 @@ initialState = State
   , viewStart = (0, 0)
   , showDebug = False
   , drawMode = Filled
+  , colorMode = MassBased
+  , arrowSizeMode = Constant
+  , startingStateMode = SingleSystem
   , buttonPos = (-350, 230)
   , buttonSize = (120, 40)
   , drawModeButtonPos = (-350, 180)
   , drawModeButtonSize = (180, 40)
+  , colorModeButtonPos = (-350, 130)
+  , colorModeButtonSize = (180, 40)
+  , arrowSizeButtonPos = (-350, 80)
+  , arrowSizeButtonSize = (180, 40)
+  , stateButtonPos = (-350, 30)
+  , stateButtonSize = (180, 40)
   , timeStep = 0.0
   , sliderPos = (-350, -250)
   , sliderSize = (400, 20)
@@ -89,6 +116,9 @@ handleMouseDown :: Float -> Float -> State -> State
 handleMouseDown x y state
   | withinButton (x, y) (adjustedButtonPos state) (buttonSize state) = state { showDebug = not (showDebug state) }
   | withinButton (x, y) (adjustedDrawModeButtonPos state) (drawModeButtonSize state) = state { drawMode = nextDrawMode (drawMode state) }
+  | withinButton (x, y) (adjustedColorModeButtonPos state) (colorModeButtonSize state) = state { colorMode = nextColorMode (colorMode state) }
+  | withinButton (x, y) (adjustedArrowSizeButtonPos state) (arrowSizeButtonSize state) = state { arrowSizeMode = nextArrowSizeMode (arrowSizeMode state) }
+  | withinButton (x, y) (adjustedStartingStateButtonPos state) (stateButtonSize state) = handleStartingStateChange state
   | withinSlider (x, y) (adjustedSliderPos state) (sliderSize state) = state { sliderValue = (x - fst (adjustedSliderPos state)) / fst (sliderSize state), timeStep = -0.9 + ((x - fst (adjustedSliderPos state)) / fst (sliderSize state)) * 1.8, isSliderActive = True }
   | otherwise =
       let worldPos = screenToWorld state (x, y)
@@ -118,11 +148,14 @@ handleMouseUp :: Float -> Float -> State -> State
 handleMouseUp x y state =
   if not (withinButton (x, y) (adjustedButtonPos state) (buttonSize state))
      && not (withinButton (x, y) (adjustedDrawModeButtonPos state) (drawModeButtonSize state))
+     && not (withinButton (x, y) (adjustedColorModeButtonPos state) (colorModeButtonSize state))
+     && not (withinButton (x, y) (adjustedArrowSizeButtonPos state) (arrowSizeButtonSize state))
+     && not (withinButton (x, y) (adjustedStartingStateButtonPos state) (stateButtonSize state))
      && not (withinSlider (x, y) (adjustedSliderPos state) (sliderSize state))
   then let (x0, y0) = dragStart state
            (xf, yf) = screenToWorld state (x, y)
            prospectiveVelocity = ((xf - x0) * 0.1, (yf - y0) * 0.1)
-       in state { dragging = False, particles = Particle (dragStart state) prospectiveVelocity (dragMass state) : particles state, isSliderActive = False }
+       in state { dragging = False, particles = Particle (dragStart state) prospectiveVelocity (dragMass state) (determineParticleColor (dragMass state)) : particles state, isSliderActive = False }
   else state { dragging = False, isSliderActive = False }
 
 handleStartPanning :: Float -> Float -> State -> State
@@ -143,6 +176,13 @@ handleZoomOut state =
   let newScale = viewScale state / 1.1
       newTranslate = (fst (viewTranslate state) / 1.1, snd (viewTranslate state) / 1.1)
   in state { viewScale = newScale, viewTranslate = newTranslate }
+
+handleStartingStateChange :: State -> State
+handleStartingStateChange state = 
+  case startingStateMode state of
+    SingleSystem -> state { startingStateMode = MultipleSystems, particles = initialMultipleSystems }
+    MultipleSystems -> state { startingStateMode = Types.Blank, particles = [] }
+    Types.Blank -> state { startingStateMode = SingleSystem, particles = initialParticles }
 
 updateState :: Float -> State -> State
 updateState _ state =
@@ -165,3 +205,11 @@ nextDrawMode :: DrawingMode -> DrawingMode
 nextDrawMode Filled = Outline
 nextDrawMode Outline = Crosshair
 nextDrawMode Crosshair = Filled
+
+nextColorMode :: ColorMode -> ColorMode
+nextColorMode MassBased = Random
+nextColorMode Random = MassBased
+
+nextArrowSizeMode :: ArrowSizeMode -> ArrowSizeMode
+nextArrowSizeMode Constant = Scaled
+nextArrowSizeMode Scaled = Constant

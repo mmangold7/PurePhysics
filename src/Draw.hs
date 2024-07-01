@@ -1,15 +1,19 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Draw 
-  ( drawState, 
-    showParticleInfo, 
-    determineParticleRadius 
+  ( drawState
+  , showParticleInfo
+  , determineParticleRadius
+  , determineParticleColor
+  , randomColors
   ) where
 
+import Graphics.Gloss.Data.Color
 import Graphics.Gloss
 import Data.Bifunctor
 import Types
 import Physics (acceleration)
+import System.Random
 
 drawState :: State -> Picture
 drawState state@State{} = Pictures [drawView state, drawHUD state]
@@ -17,7 +21,7 @@ drawState state@State{} = Pictures [drawView state, drawHUD state]
 drawView :: State -> Picture
 drawView state@State{..} = Scale viewScale viewScale 
            $ uncurry Translate viewTranslate 
-           $ Pictures (map (drawParticleWithMode drawMode viewScale showDebug particles) particles ++ drawDragPicture state)
+           $ Pictures (map (drawParticleWithMode drawMode colorMode arrowSizeMode viewScale showDebug particles) particles ++ drawDragPicture state)
 
 drawHUD :: State -> Picture
 drawHUD state@State{} =
@@ -28,6 +32,9 @@ drawHUD state@State{} =
     $ Text "HUD Information"
   , drawButton state (adjustedButtonPos state)
   , drawModeButton state (adjustedDrawModeButtonPos state)
+  , drawColorModeButton state (adjustedColorModeButtonPos state)
+  , drawArrowSizeButton state (adjustedArrowSizeButtonPos state)
+  , drawStartingStateButton state (adjustedStartingStateButtonPos state)
   , drawSlider state (adjustedSliderPos state)
   ]
 
@@ -48,9 +55,57 @@ drawModeButton State{..} (bx, by) =
                    Filled -> "Mode: Filled"
                    Outline -> "Mode: Outline"
                    Crosshair -> "Mode: Crosshair"
+      modeColor = case drawMode of
+                    Filled -> red
+                    Outline -> green
+                    Crosshair -> blue
   in Translate bx by $ Pictures 
-     [ Color blue $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
+     [ Color modeColor $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
      , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text modeText
+     ]
+
+drawColorModeButton :: State -> (Float, Float) -> Picture
+drawColorModeButton State{..} (bx, by) =
+  let (bw, bh) = colorModeButtonSize
+      colorModeText = case colorMode of
+                        MassBased -> "Color: Mass-Based"
+                        Random -> "Color: Random"
+      colorModeColor = case colorMode of
+                         MassBased -> yellow
+                         Random -> cyan
+  in Translate bx by $ Pictures 
+     [ Color colorModeColor $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
+     , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text colorModeText
+     ]
+
+drawArrowSizeButton :: State -> (Float, Float) -> Picture
+drawArrowSizeButton State{..} (bx, by) =
+  let (bw, bh) = arrowSizeButtonSize
+      arrowSizeText = case arrowSizeMode of
+                        Constant -> "Arrows: Constant"
+                        Scaled -> "Arrows: Scaled"
+      arrowSizeColor = case arrowSizeMode of
+                         Constant -> magenta
+                         Scaled -> orange
+  in Translate bx by $ Pictures 
+     [ Color arrowSizeColor $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
+     , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text arrowSizeText
+     ]
+
+drawStartingStateButton :: State -> (Float, Float) -> Picture
+drawStartingStateButton State{..} (bx, by) =
+  let (bw, bh) = stateButtonSize
+      stateText = case startingStateMode of
+                    SingleSystem -> "State: Single System"
+                    MultipleSystems -> "State: Multiple Systems"
+                    Types.Blank -> "State: Blank"
+      stateColor = case startingStateMode of
+                     SingleSystem -> magenta
+                     MultipleSystems -> violet
+                     Types.Blank -> greyN 0.5
+  in Translate bx by $ Pictures 
+     [ Color stateColor $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
+     , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text stateText
      ]
 
 drawSlider :: State -> (Float, Float) -> Picture
@@ -65,22 +120,29 @@ drawSlider State{..} (sx, sy) =
      , Translate sliderValuePos sy $ Color red $ Polygon [(0, 0), (10, 0), (10, sh), (0, sh)]
      ]
 
-drawParticleWithMode :: DrawingMode -> Float -> Bool -> [Particle] -> Particle -> Picture
-drawParticleWithMode mode inputScale showDebug allParticles particle@Particle{..} =
+drawParticleWithMode :: DrawingMode -> ColorMode -> ArrowSizeMode -> Float -> Bool -> [Particle] -> Particle -> Picture
+drawParticleWithMode mode colorMode arrowSizeMode inputScale showDebug allParticles particle@Particle{..} =
   let (x, y) = position
       radius = determineParticleRadius mass * inputScale
+      color = case colorMode of
+                MassBased -> determineParticleColor mass
+                Random -> color
       basePicture = case mode of
-        Filled -> Color (determineParticleColor mass) (circleSolid radius)
-        Outline -> Color (determineParticleColor mass) (circle radius)
+        Filled -> Color color (circleSolid radius)
+        Outline -> Color color (circle radius)
         Crosshair -> Pictures 
-          [ Color (determineParticleColor mass) $ Line [(-radius, 0), (radius, 0)]
-          , Color (determineParticleColor mass) $ Line [(0, -radius), (0, radius)]
+          [ Color color $ Line [(-radius, 0), (radius, 0)]
+          , Color color $ Line [(0, -radius), (0, radius)]
           ]
-      velocityArrow = drawArrow (x, y) (bimap (x +) (y +) velocity) green
+      len = sqrt ((fst velocity - x)^2 + (snd velocity - y)^2)
+      scale = case arrowSizeMode of
+                Constant -> 1.0
+                Scaled -> inputScale
+      velocityArrow = if len > 2 then drawArrow (x, y) (bimap (x +) (y +) (bimap (* scale) (* scale) velocity)) green else Graphics.Gloss.Blank
       acc = acceleration allParticles particle
-      accelerationArrow = drawArrow (x, y)  (bimap (x +) (y +) acc) red
+      accelerationArrow = drawArrow (x, y) (bimap (x +) (y +) acc) red
       debugInfo = Translate (x + radius + 10) (y + radius + 10) $ Scale 0.1 0.1 $ Color white $ Text (showParticleInfo (particle, 0))
-  in Pictures [Translate x y basePicture, velocityArrow, accelerationArrow, if showDebug then debugInfo else Blank]
+  in Pictures [Translate x y basePicture, velocityArrow, accelerationArrow, if showDebug then debugInfo else Graphics.Gloss.Blank]
 
 drawArrow :: (Float, Float) -> (Float, Float) -> Color -> Picture
 drawArrow (x1, y1) (x2, y2) inputColor = Color inputColor $ Pictures
@@ -116,3 +178,11 @@ determineParticleColor mass = makeColor r g b 1.0
 
 determineParticleRadius :: Float -> Float
 determineParticleRadius mass = 5 + logBase 2 (mass / 1e6)
+
+randomColors :: Int -> IO [Color]
+randomColors n = do
+  gen <- newStdGen
+  let randomList = take (3 * n) (randomRs (0.0, 1.0) gen)
+      (rs, gsbs) = splitAt n randomList
+      (gs, bs) = splitAt n gsbs
+  return $ zipWith3 (\r g b -> makeColor r g b 1.0) rs gs bs
