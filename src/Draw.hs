@@ -79,6 +79,12 @@ drawColorModeButton State{..} (bx, by) =
      , Translate 10 10 $ Scale 0.1 0.1 $ Color white $ Text colorModeText
      ]
 
+makeRandomColor :: Int -> Color
+makeRandomColor index = 
+  let gen = mkStdGen index
+      randomList = take 3 $ randomRs (0.0, 1.0) gen
+  in makeColor (randomList !! 0) (randomList !! 1) (randomList !! 2) 1.0
+
 drawArrowSizeButton :: State -> (Float, Float) -> Picture
 drawArrowSizeButton State{..} (bx, by) =
   let (bw, bh) = arrowSizeButtonSize
@@ -132,7 +138,7 @@ drawParticleWithMode mode colorMode arrowSizeMode inputScale showDebug allPartic
       radius = determineParticleRadius (mass particle) * inputScale
       inputColor = case colorMode of
                 MassBased -> determineParticleColor (mass particle)
-                Random -> inputColor
+                Random -> makeRandomColor index -- Ensure this is a valid function or replace with your logic
       basePicture = case mode of
         Filled -> Color inputColor (circleSolid radius)
         Outline -> Color inputColor (circle radius)
@@ -140,15 +146,16 @@ drawParticleWithMode mode colorMode arrowSizeMode inputScale showDebug allPartic
           [ Color inputColor $ Line [(-radius, 0), (radius, 0)]
           , Color inputColor $ Line [(0, -radius), (0, radius)]
           ]
-      len = sqrt ((fst (velocity particle) - x)^2 + (snd (velocity particle) - y)^2)
       scaleInput = case arrowSizeMode of
                 Constant -> 1.0
                 Scaled -> inputScale
-      velocityArrow = if len > 2 then drawArrow (x, y) (bimap (x +) (y +) (bimap (* scaleInput) (* scaleInput) (velocity particle))) green else Graphics.Gloss.Blank
+      velocityEnd = (x + fst (velocity particle) * scaleInput, y + snd (velocity particle) * scaleInput)
+      velocityArrow = drawArrow (x, y) velocityEnd green
       acc = acceleration allParticles particle
-      accelerationArrow = drawArrow (x, y) (bimap (x +) (y +) acc) red
+      accelerationEnd = (x + fst acc * scaleInput, y + snd acc * scaleInput)
+      accelerationArrow = drawArrow (x, y) accelerationEnd red
       infoText = showParticleInfo (particle, index)
-      textW = textWidth infoText * 0.05 / inputScale
+      textW = textWidth infoText * 0.05 / inputScale -- Adjust text width with scale factor
       debugInfo = Translate (x - textW / 2) (y + radius + 10) $ Scale (0.1 / inputScale) (0.1 / inputScale) $ Color white $ Text infoText
   in Pictures [Translate x y basePicture, velocityArrow, accelerationArrow, if showDebug then debugInfo else Graphics.Gloss.Blank]
 
