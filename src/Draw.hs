@@ -14,6 +14,7 @@ import Data.Bifunctor
 import Types
 import Physics (acceleration)
 import System.Random
+import qualified Data.Text as T
 
 drawState :: State -> Picture
 drawState state@State{} = Pictures [drawView state, drawHUD state]
@@ -21,7 +22,7 @@ drawState state@State{} = Pictures [drawView state, drawHUD state]
 drawView :: State -> Picture
 drawView state@State{..} = Scale viewScale viewScale 
            $ uncurry Translate viewTranslate 
-           $ Pictures (map (drawParticleWithMode drawMode colorMode arrowSizeMode viewScale showDebug particles) particles ++ drawDragPicture state)
+           $ Pictures (zipWith (drawParticleWithMode drawMode colorMode arrowSizeMode viewScale showDebug particles) particles [0..] ++ drawDragPicture state)
 
 drawHUD :: State -> Picture
 drawHUD state@State{} =
@@ -120,28 +121,35 @@ drawSlider State{..} (sx, sy) =
      , Translate sliderValuePos sy $ Color red $ Polygon [(0, 0), (10, 0), (10, sh), (0, sh)]
      ]
 
-drawParticleWithMode :: DrawingMode -> ColorMode -> ArrowSizeMode -> Float -> Bool -> [Particle] -> Particle -> Picture
-drawParticleWithMode mode colorMode arrowSizeMode inputScale showDebug allParticles particle@Particle{..} =
-  let (x, y) = position
-      radius = determineParticleRadius mass * inputScale
-      color = case colorMode of
-                MassBased -> determineParticleColor mass
-                Random -> color
+textWidth :: String -> Float
+textWidth txt = fromIntegral (T.length (T.pack txt)) * charWidth
+  where
+    charWidth = 100.0
+
+drawParticleWithMode :: DrawingMode -> ColorMode -> ArrowSizeMode -> Float -> Bool -> [Particle] -> Particle -> Int -> Picture
+drawParticleWithMode mode colorMode arrowSizeMode inputScale showDebug allParticles particle index =
+  let (x, y) = position particle
+      radius = determineParticleRadius (mass particle) * inputScale
+      inputColor = case colorMode of
+                MassBased -> determineParticleColor (mass particle)
+                Random -> inputColor
       basePicture = case mode of
-        Filled -> Color color (circleSolid radius)
-        Outline -> Color color (circle radius)
+        Filled -> Color inputColor (circleSolid radius)
+        Outline -> Color inputColor (circle radius)
         Crosshair -> Pictures 
-          [ Color color $ Line [(-radius, 0), (radius, 0)]
-          , Color color $ Line [(0, -radius), (0, radius)]
+          [ Color inputColor $ Line [(-radius, 0), (radius, 0)]
+          , Color inputColor $ Line [(0, -radius), (0, radius)]
           ]
-      len = sqrt ((fst velocity - x)^2 + (snd velocity - y)^2)
-      scale = case arrowSizeMode of
+      len = sqrt ((fst (velocity particle) - x)^2 + (snd (velocity particle) - y)^2)
+      scaleInput = case arrowSizeMode of
                 Constant -> 1.0
                 Scaled -> inputScale
-      velocityArrow = if len > 2 then drawArrow (x, y) (bimap (x +) (y +) (bimap (* scale) (* scale) velocity)) green else Graphics.Gloss.Blank
+      velocityArrow = if len > 2 then drawArrow (x, y) (bimap (x +) (y +) (bimap (* scaleInput) (* scaleInput) (velocity particle))) green else Graphics.Gloss.Blank
       acc = acceleration allParticles particle
       accelerationArrow = drawArrow (x, y) (bimap (x +) (y +) acc) red
-      debugInfo = Translate (x + radius + 10) (y + radius + 10) $ Scale 0.1 0.1 $ Color white $ Text (showParticleInfo (particle, 0))
+      infoText = showParticleInfo (particle, index)
+      textW = textWidth infoText * 0.05 / inputScale
+      debugInfo = Translate (x - textW / 2) (y + radius + 10) $ Scale (0.1 / inputScale) (0.1 / inputScale) $ Color white $ Text infoText
   in Pictures [Translate x y basePicture, velocityArrow, accelerationArrow, if showDebug then debugInfo else Graphics.Gloss.Blank]
 
 drawArrow :: (Float, Float) -> (Float, Float) -> Color -> Picture
@@ -154,8 +162,7 @@ drawArrow (x1, y1) (x2, y2) inputColor = Color inputColor $ Pictures
 
 showParticleInfo :: (Particle, Int) -> String
 showParticleInfo (Particle{..}, index) = 
-  "Particle " ++ show index ++ ": Pos=(" ++ show (round x :: Integer) ++ "," ++ show (round y :: Integer) 
-  ++ "), Vel=(" ++ show (round vx :: Integer) ++ "," ++ show (round vy :: Integer) ++ "), Mass=" ++ show (round mass :: Integer)
+  show index ++ " V:(" ++ show (round vx :: Integer) ++ ", " ++ show (round vy :: Integer) ++ "), M:" ++ show (round mass :: Integer)
   where
     (x, y) = position
     (vx, vy) = velocity

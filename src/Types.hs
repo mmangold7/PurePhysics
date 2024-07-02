@@ -17,7 +17,7 @@ module Types
     adjustedStartingStateButtonPos
   ) where
 
-import Graphics.Gloss (Color)
+import Graphics.Gloss
 
 type Position = (Float, Float)
 type Velocity = (Float, Float)

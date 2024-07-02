@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Simulation
   ( initialState
   , initialParticles
@@ -42,7 +40,7 @@ initialParticles = centralParticle : ringParticles
                      let angle = 2 * pi * fromIntegral i / fromIntegral numParticles
                          x = ringRadius * cos angle
                          y = ringRadius * sin angle
-                         vx = -sqrt (gravityConstant * centralMass / ringRadius) * sin angle
+                         vx =  - (sqrt (gravityConstant * centralMass / ringRadius) * sin angle)
                          vy = sqrt (gravityConstant * centralMass / ringRadius) * cos angle]
 
 initialMultipleSystems :: [Particle]
@@ -53,11 +51,11 @@ initialMultipleSystems = concatMap createSystem [(0, 0), (1000, 1000), (-1000, -
         centralStar = Particle (cx, cy) (0, 0) centralMass (determineParticleColor centralMass)
         planets = [Particle (x + cx, y + cy) (vx, vy) planetMass (determineParticleColor planetMass) | i <- [1..5],
                    let angle = 2 * pi * fromIntegral i / 5
-                       distance = 200 + fromIntegral (i * 50)
-                       x = distance * cos angle
-                       y = distance * sin angle
-                       vx = -sqrt (gravityConstant * centralMass / distance) * sin angle
-                       vy = sqrt (gravityConstant * centralMass / distance) * cos angle]
+                       inputDistance = 200 + fromIntegral (i * 50)
+                       x = inputDistance * cos angle
+                       y = inputDistance * sin angle
+                       vx = - (sqrt (gravityConstant * centralMass / inputDistance) * sin angle)
+                       vy = sqrt (gravityConstant * centralMass / inputDistance) * cos angle]
         planetMass = 1e6
 
 initialDragMass :: Float
