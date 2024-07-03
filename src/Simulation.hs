@@ -2,9 +2,10 @@ module Simulation
   ( initialState
   , initialParticles
   , initialMultipleSystems
+  , initialRealisticSolarSystem
   , initialDragMass
   , handleInput
-  , handleMouseDown
+    , handleMouseDown
   , handleMouseMotion
   , handleMouseUp
   , handleStartPanning
@@ -19,6 +20,9 @@ import Data.Bifunctor
 import Physics
 import Types
 import Draw
+
+initialDragMass :: Float
+initialDragMass = 1e6
 
 centralMass :: Float
 centralMass = 1e8
@@ -49,17 +53,81 @@ initialMultipleSystems = concatMap createSystem [(0, 0), (1000, 1000), (-1000, -
     createSystem (cx, cy) = centralStar : planets
       where
         centralStar = Particle (cx, cy) (0, 0) centralMass (determineParticleColor centralMass)
-        planets = [Particle (x + cx, y + cy) (vx, vy) planetMass (determineParticleColor planetMass) | i <- [1..5],
+        planets = [Particle (x + cx, y + cy) (vx, vy) particleMass (determineParticleColor particleMass) | i <- [1..5],
                    let angle = 2 * pi * fromIntegral i / 5
                        inputDistance = 200 + fromIntegral (i * 50)
                        x = inputDistance * cos angle
                        y = inputDistance * sin angle
                        vx = - (sqrt (gravityConstant * centralMass / inputDistance) * sin angle)
                        vy = sqrt (gravityConstant * centralMass / inputDistance) * cos angle]
-        planetMass = 1e6
 
-initialDragMass :: Float
-initialDragMass = 1e6
+solarMasses :: [(String, Float)]
+solarMasses =
+  [ ("Sun", 1.9885e30)
+  , ("Mercury", 3.3011e23)
+  , ("Venus", 4.8675e24)
+  , ("Earth", 5.97237e24)
+  , ("Mars", 6.4171e23)
+  , ("Jupiter", 1.8982e27)
+  , ("Saturn", 5.6834e26)
+  , ("Uranus", 8.6810e25)
+  , ("Neptune", 1.02413e26)
+  , ("Pluto", 1.30900e22)
+  ]
+
+-- Orbital Radii (in meters)
+orbitalRadii :: [(String, Float)]
+orbitalRadii =
+  [ ("Mercury", 57.91e9)
+  , ("Venus", 108.21e9)
+  , ("Earth", 149.60e9)
+  , ("Mars", 227.92e9)
+  , ("Jupiter", 778.57e9)
+  , ("Saturn", 1.43e12)
+  , ("Uranus", 2.87e12)
+  , ("Neptune", 4.50e12)
+  , ("Pluto", 5.91e12)
+  ]
+
+-- Velocities (calculated for circular orbits)
+orbitalVelocities :: [(String, Float)]
+orbitalVelocities =
+  [ ("Mercury", 47.87e3)
+  , ("Venus", 35.02e3)
+  , ("Earth", 29.78e3)
+  , ("Mars", 24.077e3)
+  , ("Jupiter", 13.07e3)
+  , ("Saturn", 9.69e3)
+  , ("Uranus", 6.81e3)
+  , ("Neptune", 5.43e3)
+  , ("Pluto", 4.74e3)
+  ]
+
+-- Initial Particles for Realistic Solar System
+initialRealisticSolarSystem :: [Particle]
+initialRealisticSolarSystem = 
+  let sun = Particle (0, 0) (0, 0) (massOf "Sun") white
+      planets = zipWith createPlanet orbitalRadii orbitalVelocities
+  in sun : planets
+  where
+    createPlanet (name, radius) (_, velocity) =
+      let angle = 0 -- All planets start aligned for simplicity
+      in Particle (radius * cos angle, radius * sin angle)
+                  (0, velocity) -- Velocity perpendicular to radius for circular orbit
+                  (massOf name)
+                  (colorOf name)
+    massOf name = snd $ head $ filter (\(n, _) -> n == name) solarMasses
+    colorOf name = case name of
+      "Mercury" -> greyN 0.5
+      "Venus" -> makeColor 0.8 0.6 0.4 1.0
+      "Earth" -> blue
+      "Mars" -> red
+      "Jupiter" -> makeColor 0.8 0.5 0.2 1.0
+      "Saturn" -> makeColor 0.9 0.8 0.5 1.0
+      "Uranus" -> cyan
+      "Neptune" -> makeColor 0.4 0.2 0.8 1.0
+      "Pluto" -> makeColor 0.6 0.6 0.6 1.0
+      _ -> white
 
 initialState :: State
 initialState = State
@@ -179,7 +247,8 @@ handleStartingStateChange :: State -> State
 handleStartingStateChange state = 
   case startingStateMode state of
     SingleSystem -> state { startingStateMode = MultipleSystems, particles = initialMultipleSystems }
-    MultipleSystems -> state { startingStateMode = Types.Blank, particles = [] }
+    MultipleSystems -> state { startingStateMode = RealisticSolarSystem, particles = initialRealisticSolarSystem }
+    RealisticSolarSystem -> state { startingStateMode = Types.Blank, particles = [] }
     Types.Blank -> state { startingStateMode = SingleSystem, particles = initialParticles }
 
 updateState :: Float -> State -> State
@@ -197,7 +266,7 @@ withinButton (x, y) (bx, by) (bw, bh) =
 
 withinSlider :: (Float, Float) -> (Float, Float) -> (Float, Float) -> Bool
 withinSlider (x, y) (sx, sy) (sw, sh) = 
-  x >= sx && x <= sx + sw && y >= sy && y <= sy + sh
+  x >= sx && x <= sx + sw && y <= sy + sh
 
 nextDrawMode :: DrawingMode -> DrawingMode
 nextDrawMode Filled = Outline

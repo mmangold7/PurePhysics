@@ -63,7 +63,7 @@ data ColorMode = MassBased | Random deriving (Eq, Show)
 
 data ArrowSizeMode = Constant | Scaled deriving (Eq, Show)
 
-data StartingStateMode = SingleSystem | MultipleSystems | Blank deriving (Eq, Show)
+data StartingStateMode = SingleSystem | MultipleSystems | Blank | RealisticSolarSystem deriving (Eq, Show)
 
 data Particle = Particle
   { position :: Position

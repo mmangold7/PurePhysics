@@ -105,10 +105,12 @@ drawStartingStateButton State{..} (bx, by) =
       stateText = case startingStateMode of
                     SingleSystem -> "State: Single System"
                     MultipleSystems -> "State: Multiple Systems"
+                    RealisticSolarSystem -> "State: Realistic Solar System"
                     Types.Blank -> "State: Blank"
       stateColor = case startingStateMode of
                      SingleSystem -> magenta
                      MultipleSystems -> violet
+                     RealisticSolarSystem -> green
                      Types.Blank -> greyN 0.5
   in Translate bx by $ Pictures 
      [ Color stateColor $ Polygon [(0, 0), (bw, 0), (bw, bh), (0, bh)]
